@@ -39,8 +39,9 @@ contract MultiSignatureWallet {
     // Events
     event DepositEvent(address from, uint256 amount);
     event ApprovalEvent(address owner, uint256 transactionId, Transaction transaction);
+     event RevertApprovalEvent(address owner, uint256 transactionId, Transaction transaction);
     event NewTransactionEvent(uint256 transactionId, Transaction transaction);
-    event ExecutionTransactionEvent(uint256 transactionId, Transaction transaction);
+    event TransactionExecutionEvent(uint256 transactionId, Transaction transaction);
 
     // Modifiers
     modifier onlyOwner () {
@@ -71,7 +72,9 @@ contract MultiSignatureWallet {
     // Functions
     receive() external payable {}
 
-    function deposit () public payable {}
+    function deposit () public payable {
+        emit DepositEvent(msg.sender, msg.value);
+    }
 
     function createTransaction (address _to, bytes calldata _data) public payable onlyOwner {
         transactionsCount += 1;
@@ -86,16 +89,34 @@ contract MultiSignatureWallet {
         for (uint i = 0; i < owners.length; i ++) {
             transactionApprovals[transactionsCount][owners[i]] = false;
         }
+
+        emit NewTransactionEvent(transactionsCount, transactions[transactionsCount]);
     }
 
     function approveTransaction (uint256 _transactionId) public onlyOwner transactionExists(_transactionId) transactionNotApprovedByOwner(_transactionId) {
         transactionApprovals[_transactionId][msg.sender] = true;
         transactions[_transactionId].approvalCount += 1;
+
+        emit ApprovalEvent(msg.sender, _transactionId, transactions[_transactionId]);
     } 
 
     function revertTransactionApproval (uint256 _transactionId) public onlyOwner transactionExists(_transactionId) transactionApprovedByOwner(_transactionId) {
         transactionApprovals[_transactionId][msg.sender] = false;
         transactions[_transactionId].approvalCount -= 1;
+
+        emit RevertApprovalEvent(msg.sender, _transactionId, transactions[_transactionId]);
+    }
+
+    function executeTransaction (uint256 _transactionId) public onlyOwner transactionExists(_transactionId) transactionNotExecuted(_transactionId) {
+        require(transactions[_transactionId].approvalCount >= minimumApprovalRequired, "Transaction Approvals not up to Minimum Required");
+
+        // Perform other Transaction logic
+
+        // 
+
+        transactions[_transactionId].executed = true;
+
+        emit TransactionExecutionEvent(_transactionId, transactions[_transactionId]);
     }
 }
 
