@@ -22,7 +22,7 @@ contract MultiSignatureWallet {
     mapping (uint256 => Transaction) public transactions;
 
     // transactionId => owner => approved(true)
-    mapping (uint256 => mapping (address => bool)) public approvals;
+    mapping (uint256 => mapping (address => bool)) public transactionApprovals;
 
     // initialize
     constructor (address[] memory _owners, uint256 _minimumApprovalRequired) {
@@ -59,12 +59,12 @@ contract MultiSignatureWallet {
     }
 
     modifier transactionApprovedByOwner (uint256 _transactionId) {
-        require(approvals[_transactionId][msg.sender], "Transaction not Approved By Owner");
+        require(transactionApprovals[_transactionId][msg.sender], "Transaction not Approved By Owner");
         _;
     }
 
     modifier transactionNotApprovedByOwner (uint256 _transactionId) {
-        require(!approvals[_transactionId][msg.sender], "Transaction Already Approved By Owner");
+        require(!transactionApprovals[_transactionId][msg.sender], "Transaction Already Approved By Owner");
         _;
     }
 
@@ -73,13 +73,30 @@ contract MultiSignatureWallet {
 
     function deposit () public payable {}
 
-    function createTransaction (address _to, bytes calldata _data) public onlyOwner {
-        
+    function createTransaction (address _to, bytes calldata _data) public payable onlyOwner {
+        transactionsCount += 1;
+
+        transactions[transactionsCount] = Transaction({
+            to: _to,
+            value: msg.value,
+            data: _data,
+            approvalCount: 0,
+            executed: false
+        });
+        for (uint i = 0; i < owners.length; i ++) {
+            transactionApprovals[transactionsCount][owners[i]] = false;
+        }
     }
 
     function approveTransaction (uint256 _transactionId) public onlyOwner transactionExists(_transactionId) transactionNotApprovedByOwner(_transactionId) {
-        
+        transactionApprovals[_transactionId][msg.sender] = true;
+        transactions[_transactionId].approvalCount += 1;
     } 
+
+    function revertTransactionApproval (uint256 _transactionId) public onlyOwner transactionExists(_transactionId) transactionApprovedByOwner(_transactionId) {
+        transactionApprovals[_transactionId][msg.sender] = false;
+        transactions[_transactionId].approvalCount -= 1;
+    }
 }
 
 
