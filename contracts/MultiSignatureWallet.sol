@@ -39,7 +39,7 @@ contract MultiSignatureWallet {
     // Events
     event DepositEvent(address from, uint256 amount);
     event ApprovalEvent(address owner, uint256 transactionId, Transaction transaction);
-     event RevertApprovalEvent(address owner, uint256 transactionId, Transaction transaction);
+    event RevertApprovalEvent(address owner, uint256 transactionId, Transaction transaction);
     event NewTransactionEvent(uint256 transactionId, Transaction transaction);
     event TransactionExecutionEvent(uint256 transactionId, Transaction transaction);
 
