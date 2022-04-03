@@ -5,7 +5,6 @@ contract MultiSignatureWallet {
     struct Transaction {
         address to;
         uint256 value;
-        bytes data;
         uint256 approvalCount;
         bool executed;
     }
@@ -76,13 +75,12 @@ contract MultiSignatureWallet {
         emit DepositEvent(msg.sender, msg.value);
     }
 
-    function createTransaction (address _to, bytes calldata _data) public payable onlyOwner {
+    function createTransaction (address _to, uint256 _value) public payable onlyOwner {
         transactionsCount += 1;
 
         transactions[transactionsCount] = Transaction({
             to: _to,
-            value: msg.value,
-            data: _data,
+            value: _value,
             approvalCount: 0,
             executed: false
         });
@@ -111,12 +109,18 @@ contract MultiSignatureWallet {
         require(transactions[_transactionId].approvalCount >= minimumApprovalRequired, "Transaction Approvals not up to Minimum Required");
 
         // Perform other Transaction logic
-
+        (bool executed, ) = transactions[_transactionId].to.call{value: transactions[_transactionId].value}("");
         // 
+
+        require(executed, "Transaction Execution Unsuccessful");
 
         transactions[_transactionId].executed = true;
 
         emit TransactionExecutionEvent(_transactionId, transactions[_transactionId]);
+    }
+
+    function balance () public view onlyOwner returns (uint256) {
+        return address(this).balance;
     }
 }
 
